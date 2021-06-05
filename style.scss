@@ -1,0 +1,102 @@
+* {
+  font-family: "Roboto", sans-serif;
+}
+
+body {
+  color: #d3d3d3;
+  background-color: #151515;
+}
+
+#app {
+  max-width: 1350px;
+  margin: auto;
+}
+
+.boldText {
+  font-weight: bold;
+  margin-left: 16px;
+}
+
+.header {
+  text-align: center;
+}
+
+.hullSelection,
+.fittingRow {
+  display: flex;
+  flex-direction: row;
+  height: 1.5rem;
+  align-items: center;
+
+  p {
+    margin: 0 16px;
+  }
+}
+
+.rowContainer {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.fittingRow {
+  width: 50%;
+  position: relative;
+}
+
+.fittingRowGroup {
+  display: flex;
+  justify-content: flex-end;
+  position: absolute;
+  left: 40px;
+  width: 91.8%;
+
+  select {
+    width: 100%;
+    margin: 0;
+  }
+
+  input {
+    width: 5%;
+  }
+
+  button {
+    margin: 0;
+  }
+}
+
+.builderSection {
+  margin: 24px 0;
+}
+
+.sectionHeading {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 1px solid white;
+  padding-bottom: 8px;
+  margin: 0 16px 8px 16px;
+
+  h2 {
+    margin: 0;
+    padding: 0;
+  }
+}
+
+table {
+  margin: auto;
+
+  th,
+  td {
+    padding: 0 8px;
+    text-align: center;
+  }
+}
+
+.results {
+  margin-top: 64px;
+}
+
+.resultOverflow {
+  color: red;
+}

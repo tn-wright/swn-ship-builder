@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SWN Ship Builder</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <div id="app">
+      <div class="header">
+        <h1>Stars Without Number Ship Builder</h1>
+      </div>
+      <div class="builder">
+        <div class="hullSelection builderSection">
+          <p>Hull Type:</p>
+          <select v-model="selectedHull" @change="filterFittingLists">
+            <option value=""></option>
+            <option v-for="(hull,index) of hulls" v-bind:value="index">
+              {{hull.name}}
+            </option>
+          </select>
+          <p v-if="selectedHull !== ''">
+            <span class="boldText">Cost:</span>
+            {{hulls[selectedHull].cost.toLocaleString()}}
+            <span class="boldText">Speed:</span> {{hulls[selectedHull].speed !==
+            null?hulls[selectedHull].speed:"N/A"}}
+            <span class="boldText">Armor:</span> {{hulls[selectedHull].armor}}
+            <span class="boldText">HP:</span> {{hulls[selectedHull].hp}}
+            <span class="boldText">Crew:</span>
+            {{hulls[selectedHull].crewMin}}/{{hulls[selectedHull].crewMax}}
+            <span class="boldText">AC:</span> {{hulls[selectedHull].ac}}
+            <span class="boldText">Power:</span> {{hulls[selectedHull].power}}
+            <span class="boldText">Mass:</span> {{hulls[selectedHull].mass}}
+            <span class="boldText">Hard Points:</span>
+            {{hulls[selectedHull].hardPoints}}
+            <span class="boldText">Hull Class:</span>
+            {{convertHullClassNumber(hulls[selectedHull].hullClass)}}
+          </p>
+        </div>
+        <div v-if="selectedHull !== ''" class="fittingSelection builderSection">
+          <div class="sectionHeading">
+            <h2>Fittings</h2>
+            <button @click="addFitting">Add Fitting</button>
+          </div>
+          <div class="rowContainer">
+            <div
+              v-for="(selectedFitting, selectedIndex) of selectedFittings"
+              class="fittingRow"
+            >
+              <p>{{selectedIndex+1}}.</p>
+              <div class="fittingRowGroup">
+                <select v-model="selectedFittings[selectedIndex]">
+                  <option value=""></option>
+                  <option
+                    v-for="(fitting, fittingIndex) of currentFittings"
+                    v-bind:value="fittingIndex"
+                  >
+                    {{generateOptionString(currentFittings[fittingIndex])}}
+                  </option>
+                </select>
+                <button @click="removeFitting(selectedIndex)">-</button>
+                <input v-model="selectedFittingsCount[selectedIndex]" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="selectedHull !== ''" class="defenseSelection builderSection">
+          <div class="sectionHeading">
+            <h2>Defenses</h2>
+            <button @click="addDefense">Add Defense</button>
+          </div>
+          <div class="rowContainer">
+            <div
+              v-for="(selectedDefense, selectedIndex) of selectedDefenses"
+              class="fittingRow"
+            >
+              <p>{{selectedIndex+1}}.</p>
+              <div class="fittingRowGroup">
+                <select v-model="selectedDefenses[selectedIndex]">
+                  <option value=""></option>
+                  <option
+                    v-for="(defense, defenseIndex) of currentDefenses"
+                    v-bind:value="defenseIndex"
+                  >
+                    {{generateOptionString(currentDefenses[defenseIndex])}}
+                  </option>
+                </select>
+                <button @click="removeDefense(selectedIndex)">-</button>
+                <input v-model="selectedDefensesCount[selectedIndex]" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="selectedHull !== ''" class="weaponSelection builderSection">
+          <div class="sectionHeading">
+            <h2>Weapons</h2>
+            <button @click="addWeapon">Add Weapon</button>
+          </div>
+          <div class="rowContainer">
+            <div
+              v-for="(selectedWeapon, selectedIndex) of selectedWeapons"
+              class="fittingRow"
+            >
+              <p>{{selectedIndex+1}}.</p>
+              <div class="fittingRowGroup">
+                <select v-model="selectedWeapons[selectedIndex]">
+                  <option value=""></option>
+                  <option
+                    v-for="(weapon, weaponIndex) of currentWeapons"
+                    v-bind:value="weaponIndex"
+                  >
+                    {{generateWeaponOptionString(currentWeapons[weaponIndex])}}
+                  </option>
+                </select>
+                <button @click="removeWeapon(selectedIndex)">-</button>
+                <input v-model="selectedWeaponsCount[selectedIndex]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="selectedHull !== ''" class="results">
+        <table>
+          <tr>
+            <th>Hull Type</th>
+            <th>Hull Class</th>
+            <th>Cost</th>
+            <th>Drive Rating</th>
+            <th>Speed</th>
+            <th>Armor</th>
+            <th>HP</th>
+            <th>Crew</th>
+            <th>AC</th>
+            <th>Rem. Power</th>
+            <th>Rem. Mass</th>
+            <th>Rem. Hard Points</th>
+            <th>Cargo Space</th>
+            <th>Smuggler's Space</th>
+          </tr>
+          <tr>
+            <td>{{hulls[selectedHull].name}}</td>
+            <td>{{convertHullClassNumber(hulls[selectedHull].hullClass)}}</td>
+            <td>{{calculateTotalCost().toLocaleString()}}</td>
+            <td>{{calculateDriveRating()}}</td>
+            <td>{{calculateTotalSpeed()}}</td>
+            <td>{{hulls[selectedHull].armor}}</td>
+            <td>{{calculateTotalHP()}}</td>
+            <td>
+              {{hulls[selectedHull].crewMin}}/{{hulls[selectedHull].crewMax}}
+            </td>
+            <td>{{calculateTotalAC()}}</td>
+            <td v-bind:class="{ resultOverflow: powerOverflow }">
+              {{calculateRemainingPower()}}
+            </td>
+            <td v-bind:class="{ resultOverflow: massOverflow }">
+              {{calculateRemainingMass()}}
+            </td>
+            <td v-bind:class="{ resultOverflow: hardPointOverflow }">
+              {{calulateRemainingHardPoints()}}
+            </td>
+            <td>{{calculateCargoSpace()}}</td>
+            <td>{{calculateSmugglersSpace()}}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <script>
+      const hullClassEnum = Object.freeze({
+        fighter: 1,
+        frigate: 2,
+        cruiser: 3,
+        capital: 4,
+      });
+
+      const hulls = [
+        {
+          name: "Strike Fighter",
+          cost: 200000,
+          speed: 5,
+          armor: 5,
+          hp: 8,
+          crewMin: 1,
+          crewMax: 1,
+          ac: 16,
+          power: 5,
+          mass: 2,
+          hardPoints: 1,
+          hullClass: hullClassEnum.fighter,
+        },
+        {
+          name: "Shuttle",
+          cost: 200000,
+          speed: 3,
+          armor: 0,
+          hp: 15,
+          crewMin: 1,
+          crewMax: 10,
+          ac: 11,
+          power: 3,
+          mass: 5,
+          hardPoints: 1,
+          hullClass: hullClassEnum.fighter,
+        },
+        {
+          name: "Free Merchant",
+          cost: 500000,
+          speed: 3,
+          armor: 2,
+          hp: 20,
+          crewMin: 1,
+          crewMax: 6,
+          ac: 14,
+          power: 10,
+          mass: 15,
+          hardPoints: 2,
+          hullClass: hullClassEnum.frigate,
+        },
+        {
+          name: "Patrol Boat",
+          cost: 2500000,
+          speed: 4,
+          armor: 5,
+          hp: 25,
+          crewMin: 5,
+          crewMax: 20,
+          ac: 14,
+          power: 15,
+          mass: 10,
+          hardPoints: 4,
+          hullClass: hullClassEnum.frigate,
+        },
+        {
+          name: "Corvette",
+          cost: 4000000,
+          speed: 2,
+          armor: 10,
+          hp: 40,
+          crewMin: 10,
+          crewMax: 40,
+          ac: 13,
+          power: 15,
+          mass: 15,
+          hardPoints: 6,
+          hullClass: hullClassEnum.frigate,
+        },
+        {
+          name: "Heavy Frigate",
+          cost: 7000000,
+          speed: 1,
+          armor: 10,
+          hp: 50,
+          crewMin: 30,
+          crewMax: 120,
+          ac: 15,
+          power: 25,
+          mass: 20,
+          hardPoints: 8,
+          hullClass: hullClassEnum.frigate,
+        },
+        {
+          name: "Bulk Freighter",
+          cost: 5000000,
+          speed: 0,
+          armor: 0,
+          hp: 40,
+          crewMin: 10,
+          crewMax: 40,
+          ac: 11,
+          power: 15,
+          mass: 25,
+          hardPoints: 2,
+          hullClass: hullClassEnum.cruiser,
+        },
+        {
+          name: "Fleet Cruiser",
+          cost: 10000000,
+          speed: 1,
+          armor: 15,
+          hp: 60,
+          crewMin: 50,
+          crewMax: 200,
+          ac: 14,
+          power: 50,
+          mass: 30,
+          hardPoints: 10,
+          hullClass: hullClassEnum.cruiser,
+        },
+        {
+          name: "Battleship",
+          cost: 50000000,
+          speed: 0,
+          armor: 20,
+          hp: 100,
+          crewMin: 200,
+          crewMax: 1000,
+          ac: 16,
+          power: 75,
+          mass: 50,
+          hardPoints: 15,
+          hullClass: hullClassEnum.capital,
+        },
+        {
+          name: "Carrier",
+          cost: 60000000,
+          speed: 0,
+          armor: 10,
+          hp: 75,
+          crewMin: 300,
+          crewMax: 1500,
+          ac: 14,
+          power: 50,
+          mass: 100,
+          hardPoints: 4,
+          hullClass: hullClassEnum.capital,
+        },
+        {
+          name: "Small Station",
+          cost: 5000000,
+          speed: null,
+          armor: 5,
+          hp: 120,
+          crewMin: 20,
+          crewMax: 200,
+          ac: 11,
+          power: 50,
+          mass: 40,
+          hardPoints: 10,
+          hullClass: hullClassEnum.cruiser,
+        },
+        {
+          name: "Large Station",
+          cost: 40000000,
+          speed: null,
+          armor: 20,
+          hp: 120,
+          crewMin: 100,
+          crewMax: 1000,
+          ac: 17,
+          power: 125,
+          mass: 75,
+          hardPoints: 30,
+          hullClass: hullClassEnum.capital,
+        },
+      ];
+
+      const fittings = [
+        {
+          name: "Advanced Lab",
+          cost: 10000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 2,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Advanced Nav Computer",
+          cost: 10000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 0,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Amphibious Operation",
+          cost: 25000,
+          scaleCost: true,
+          power: 1,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.frigate,
+        },
+        {
+          name: "Armory",
+          cost: 10000,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 0,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Atmospheric Configuration",
+          cost: 5000,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.frigate,
+        },
+        {
+          name: "Auto-Targeting System",
+          cost: 50000,
+          scaleCost: false,
+          power: 1,
+          scalePower: false,
+          mass: 0,
+          scaleMass: false,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Automation Support",
+          cost: 10000,
+          scaleCost: true,
+          power: 2,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Boarding Tubes",
+          cost: 5000,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Cargo Lighter",
+          cost: 25000,
+          scaleCost: false,
+          power: 0,
+          scalePower: false,
+          mass: 2,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Cargo Space",
+          cost: 0,
+          scaleCost: false,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Cold Sleep Pods",
+          cost: 5000,
+          scaleCost: true,
+          power: 1,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Colony Core",
+          cost: 100000,
+          scaleCost: true,
+          power: 4,
+          scalePower: false,
+          mass: 2,
+          scaleMass: true,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Drill Course Regulator",
+          cost: 25000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Drive-2 Upgrade",
+          cost: 10000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Drive-3 Upgrade",
+          cost: 20000,
+          scaleCost: true,
+          power: 2,
+          scalePower: true,
+          mass: 2,
+          scaleMass: true,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Drive-4 Upgrade",
+          cost: 40000,
+          scaleCost: true,
+          power: 2,
+          scalePower: true,
+          mass: 3,
+          scaleMass: true,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Drive-5 Upgrade",
+          cost: 100000,
+          scaleCost: true,
+          power: 3,
+          scalePower: true,
+          mass: 3,
+          scaleMass: true,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Drive-6 Upgrade",
+          cost: 500000,
+          scaleCost: true,
+          power: 3,
+          scalePower: true,
+          mass: 4,
+          scaleMass: true,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Drop Pod",
+          cost: 300000,
+          scaleCost: false,
+          power: 0,
+          scalePower: false,
+          mass: 2,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Emissions Dampers",
+          cost: 25000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Exodus Bay",
+          cost: 50000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 2,
+          scaleMass: true,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Extended Life Support",
+          cost: 5000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Extended Medbay",
+          cost: 5000,
+          scaleCost: true,
+          power: 1,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Extended Stores",
+          cost: 2500,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Fuel Bunkers",
+          cost: 2500,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Fuel Scoops",
+          cost: 5000,
+          scaleCost: true,
+          power: 2,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Hydroponic Production",
+          cost: 10000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 2,
+          scaleMass: true,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Lifeboats",
+          cost: 2500,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Luxury Cabins",
+          cost: 10000,
+          scaleCost: true,
+          power: 1,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Mobile Extractor",
+          cost: 50000,
+          scaleCost: false,
+          power: 2,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Mobile Factory",
+          cost: 50000,
+          scaleCost: true,
+          power: 3,
+          scalePower: false,
+          mass: 2,
+          scaleMass: true,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Precognitive Nav Chamber",
+          cost: 100000,
+          scaleCost: true,
+          power: 1,
+          scalePower: false,
+          mass: 0,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Psionic Anchorpoint",
+          cost: 0,
+          scaleCost: true,
+          power: 3,
+          scalePower: false,
+          mass: 0,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Sensor Mask",
+          cost: 10000,
+          scaleCost: true,
+          power: 1,
+          scalePower: true,
+          mass: 0,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Ship Bay/Fighter",
+          cost: 200000,
+          scaleCost: false,
+          power: 0,
+          scalePower: false,
+          mass: 2,
+          scaleMass: false,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Ship Bay/Frigate",
+          cost: 1000000,
+          scaleCost: false,
+          power: 1,
+          scalePower: false,
+          mass: 4,
+          scaleMass: false,
+          minClass: hullClassEnum.capital,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Ship's Locker",
+          cost: 2000,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 0,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Shiptender Mount",
+          cost: 25000,
+          scaleCost: true,
+          power: 1,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Smuggler's Hold",
+          cost: 2500,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Survey Sensor Array",
+          cost: 5000,
+          scaleCost: true,
+          power: 2,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "System Drive",
+          cost: "special",
+          hullCostModifier: -0.1,
+          scaleCost: false,
+          power: -1,
+          scalePower: true,
+          mass: -2,
+          scaleMass: true,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Teleportation Pads",
+          cost: 0,
+          scaleCost: false,
+          power: 1,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Tractor Beams",
+          cost: 10000,
+          scaleCost: true,
+          power: 2,
+          scalePower: false,
+          mass: 1,
+          scaleMass: false,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Vehicle Transport Fittings",
+          cost: 2500,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Workshop",
+          cost: 500,
+          scaleCost: true,
+          power: 1,
+          scalePower: false,
+          mass: 0.5,
+          scaleMass: true,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+      ];
+
+      const defenses = [
+        {
+          name: "Ablative Hull Compartments",
+          cost: 100000,
+          scaleCost: true,
+          power: 5,
+          scalePower: false,
+          mass: 2,
+          scaleMass: true,
+          ac: 1,
+          hp: 20,
+          speed: 0,
+          minClass: hullClassEnum.capital,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Augmented Plating",
+          cost: 25000,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          ac: 2,
+          hp: 0,
+          speed: -1,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Boarding Countermeasures",
+          cost: 25000,
+          scaleCost: true,
+          power: 2,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          ac: 0,
+          hp: 0,
+          speed: 0,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Burst ECM Generator",
+          cost: 25000,
+          scaleCost: true,
+          power: 2,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          ac: 0,
+          hp: 0,
+          speed: 0,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Foxer Drones",
+          cost: 10000,
+          scaleCost: true,
+          power: 2,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          ac: 0,
+          hp: 0,
+          speed: 0,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Grav Eddy Displacer",
+          cost: 50000,
+          scaleCost: true,
+          power: 5,
+          scalePower: false,
+          mass: 2,
+          scaleMass: true,
+          ac: 0,
+          hp: 0,
+          speed: 0,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Hardened Polyceramic Overlay",
+          cost: 25000,
+          scaleCost: true,
+          power: 0,
+          scalePower: false,
+          mass: 1,
+          scaleMass: true,
+          ac: 0,
+          hp: 0,
+          speed: 0,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Planetary Defense Array",
+          cost: 50000,
+          scaleCost: true,
+          power: 4,
+          scalePower: false,
+          mass: 2,
+          scaleMass: true,
+          ac: 0,
+          hp: 0,
+          speed: 0,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+        {
+          name: "Point Defense Lasers",
+          cost: 10000,
+          scaleCost: true,
+          power: 3,
+          scalePower: false,
+          mass: 2,
+          scaleMass: true,
+          ac: 0,
+          hp: 0,
+          speed: 0,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+        },
+      ];
+
+      const weapons = [
+        {
+          name: "Multifocal Laser",
+          cost: 100000,
+          ammoCost: 0,
+          dmg: "1d4",
+          power: 5,
+          mass: 1,
+          hardPoints: 1,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 20",
+        },
+        {
+          name: "Reaper Battery",
+          cost: 100000,
+          ammoCost: 0,
+          dmg: "3d4",
+          power: 4,
+          mass: 1,
+          hardPoints: 1,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "Clumsy",
+        },
+        {
+          name: "Fractal Impact Charge",
+          cost: 200000,
+          ammoCost: 500,
+          dmg: "2d6",
+          power: 5,
+          mass: 1,
+          hardPoints: 1,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 15, Ammo 4",
+        },
+        {
+          name: "Polyspectal MES Beam",
+          cost: 2000000,
+          ammoCost: 0,
+          dmg: "2d4",
+          power: 5,
+          mass: 1,
+          hardPoints: 1,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+          tl: 5,
+          qualities: "AP 25",
+        },
+        {
+          name: "Sandthrower",
+          cost: 50000,
+          ammoCost: 0,
+          dmg: "2d4",
+          power: 3,
+          mass: 1,
+          hardPoints: 1,
+          minClass: hullClassEnum.fighter,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "Flak",
+        },
+        {
+          name: "Flak Emitter Battery",
+          cost: 500000,
+          ammoCost: 0,
+          dmg: "2d6",
+          power: 5,
+          mass: 3,
+          hardPoints: 1,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 10, Flak",
+        },
+        {
+          name: "Torpedo Launcher",
+          cost: 500000,
+          ammoCost: 2500,
+          dmg: "3d8",
+          power: 10,
+          mass: 3,
+          hardPoints: 1,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 20, Ammo 4",
+        },
+        {
+          name: "Charged Particle Castor",
+          cost: 800000,
+          ammoCost: 0,
+          dmg: "3d6",
+          power: 10,
+          mass: 1,
+          hardPoints: 2,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 15, Clumsy",
+        },
+        {
+          name: "Plasma Beam",
+          cost: 700000,
+          ammoCost: 0,
+          dmg: "3d6",
+          power: 5,
+          mass: 2,
+          hardPoints: 2,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 10",
+        },
+        {
+          name: "Mag Spike Array",
+          cost: 1000000,
+          ammoCost: 5000,
+          dmg: "2d6+2",
+          power: 5,
+          mass: 2,
+          hardPoints: 2,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "Flak, AP 10, Ammo 5",
+        },
+        {
+          name: "Nuclear Missles",
+          cost: 50000,
+          ammoCost: 5000,
+          dmg: "Special",
+          power: 5,
+          mass: 1,
+          hardPoints: 2,
+          minClass: hullClassEnum.frigate,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "Ammo 5",
+        },
+        {
+          name: "Spinal Beam Cannon",
+          cost: 1500000,
+          ammoCost: 0,
+          dmg: "3d10",
+          power: 10,
+          mass: 5,
+          hardPoints: 3,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 15, Clumsy",
+        },
+        {
+          name: "Smart Cloud",
+          cost: 2000000,
+          ammoCost: 0,
+          dmg: "3d10",
+          power: 10,
+          mass: 5,
+          hardPoints: 2,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "Cloud, Clumsy",
+        },
+        {
+          name: "Gravcannon",
+          cost: 2000000,
+          ammoCost: 0,
+          dmg: "4d6",
+          power: 15,
+          mass: 4,
+          hardPoints: 3,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 20",
+        },
+        {
+          name: "Spike Inversion Projector",
+          cost: 2500000,
+          ammoCost: 0,
+          dmg: "3d8",
+          power: 10,
+          mass: 3,
+          hardPoints: 3,
+          minClass: hullClassEnum.cruiser,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 15",
+        },
+        {
+          name: "Vortex Tunnel Inductor",
+          cost: 5000000,
+          ammoCost: 0,
+          dmg: "3d20",
+          power: 20,
+          mass: 10,
+          hardPoints: 4,
+          minClass: hullClassEnum.capital,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 20, Clumsy",
+        },
+        {
+          name: "Mass Cannon",
+          cost: 5000000,
+          ammoCost: 50000,
+          dmg: "2d20",
+          power: 10,
+          mass: 5,
+          hardPoints: 4,
+          minClass: hullClassEnum.capital,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 20, Ammo 4",
+        },
+        {
+          name: "Lightning Charge Mantle",
+          cost: 4000000,
+          ammoCost: 0,
+          dmg: "1d20",
+          power: 15,
+          mass: 5,
+          hardPoints: 2,
+          minClass: hullClassEnum.capital,
+          maxClass: hullClassEnum.capital,
+          tl: 4,
+          qualities: "AP 5, Cloud",
+        },
+        {
+          name: "Singularity Gun",
+          cost: 20000000,
+          ammoCost: 0,
+          dmg: "5d20",
+          power: 25,
+          mass: 10,
+          hardPoints: 5,
+          minClass: hullClassEnum.capital,
+          maxClass: hullClassEnum.capital,
+          tl: 5,
+          qualities: "AP 25",
+        },
+      ];
+
+      var app = new Vue({
+        el: "#app",
+        data: {
+          hulls: hulls,
+          fittings: fittings,
+          defenses: defenses,
+          weapons: weapons,
+          currentFittings: null,
+          currentDefenses: null,
+          currentWeapons: null,
+          selectedHull: "",
+          selectedFittings: [""],
+          selectedFittingsCount: [1],
+          selectedDefenses: [""],
+          selectedDefensesCount: [1],
+          selectedWeapons: [""],
+          selectedWeaponsCount: [1],
+          powerOverflow: false,
+          massOverflow: false,
+          hardPointOverflow: false,
+        },
+        methods: {
+          convertHullClassNumber: function (classNum) {
+            switch (classNum) {
+              case hullClassEnum.fighter:
+                return "Fighter";
+              case hullClassEnum.frigate:
+                return "Frigate";
+              case hullClassEnum.cruiser:
+                return "Cruiser";
+              case hullClassEnum.capital:
+                return "Capital";
+            }
+          },
+          addFitting: function () {
+            this.selectedFittings.push("");
+            this.selectedFittingsCount.push(1);
+          },
+          removeFitting: function (index) {
+            this.selectedFittings.splice(index, 1);
+            this.selectedFittingsCount.splice(index, 1);
+          },
+          addDefense: function () {
+            this.selectedDefenses.push("");
+            this.selectedDefensesCount.push(1);
+          },
+          removeDefense: function (index) {
+            this.selectedDefenses.splice(index, 1);
+            this.selectedDefensesCount.splice(index, 1);
+          },
+          addWeapon: function () {
+            this.selectedWeapons.push("");
+            this.selectedWeaponsCount.push(1);
+          },
+          removeWeapon: function (index) {
+            this.selectedWeapons.splice(index, 1);
+            this.selectedWeaponsCount.splice(index, 1);
+          },
+          filterObjectsByClass: function (fitting) {
+            // Figure out if it is above the min and then below the max
+            const isAboveMin =
+              this.hulls[this.selectedHull].hullClass >= fitting.minClass;
+            const isBelowMax =
+              this.hulls[this.selectedHull].hullClass <= fitting.maxClass;
+
+            //return true if both conditions are true
+            return isAboveMin && isBelowMax;
+          },
+          filterFittingLists: function () {
+            //reset the selected lists when the hull changes
+            this.selectedFittings = [""];
+            this.selectedDefenses = [""];
+            this.selectedWeapons = [""];
+
+            //reset counts
+            this.selectedFittingsCount = [1];
+            this.selectedDefensesCount = [1];
+            this.selectedWeaponsCount = [1];
+
+            //Filter the available lists of fittings
+            this.currentFittings = this.fittings.filter(
+              this.filterObjectsByClass
+            );
+            this.currentDefenses = this.defenses.filter(
+              this.filterObjectsByClass
+            );
+            this.currentWeapons = this.weapons.filter(
+              this.filterObjectsByClass
+            );
+          },
+          calculatePower: function (fitting) {
+            if (!fitting.scalePower) {
+              return fitting.power;
+            }
+
+            switch (this.hulls[this.selectedHull].hullClass) {
+              case hullClassEnum.fighter:
+                return fitting.power;
+              case hullClassEnum.frigate:
+                return fitting.power * 2;
+              case hullClassEnum.cruiser:
+                return fitting.power * 3;
+              case hullClassEnum.capital:
+                return fitting.power * 4;
+            }
+          },
+          calculateMass: function (fitting) {
+            if (!fitting.scaleMass) {
+              return fitting.mass;
+            }
+
+            switch (this.hulls[this.selectedHull].hullClass) {
+              case hullClassEnum.fighter:
+                return fitting.mass;
+              case hullClassEnum.frigate:
+                return fitting.mass * 2;
+              case hullClassEnum.cruiser:
+                return fitting.mass * 3;
+              case hullClassEnum.capital:
+                return fitting.mass * 4;
+            }
+          },
+          calculateCost: function (fitting) {
+            if (fitting.cost === "special") {
+              return (
+                fitting.hullCostModifier * this.hulls[this.selectedHull].cost
+              );
+            }
+
+            if (!fitting.scaleCost) {
+              return fitting.cost;
+            }
+
+            switch (this.hulls[this.selectedHull].hullClass) {
+              case hullClassEnum.fighter:
+                return fitting.cost;
+              case hullClassEnum.frigate:
+                return fitting.cost * 10;
+              case hullClassEnum.cruiser:
+                return fitting.cost * 25;
+              case hullClassEnum.capital:
+                return fitting.cost * 100;
+            }
+          },
+          calculateTotalCost: function () {
+            let costSum = this.hulls[this.selectedHull].cost;
+
+            for (let index = 0; index < this.selectedFittings.length; index++) {
+              let fitting = this.selectedFittings[index];
+              if (this.currentFittings[fitting]) {
+                costSum +=
+                  this.calculateCost(this.currentFittings[fitting]) *
+                  this.selectedFittingsCount[index];
+              }
+            }
+
+            for (let index = 0; index < this.selectedDefenses.length; index++) {
+              let defense = this.selectedDefenses[index];
+              if (this.currentDefenses[defense]) {
+                costSum +=
+                  this.calculateCost(this.currentDefenses[defense]) *
+                  this.selectedDefensesCount[index];
+              }
+            }
+
+            for (let index = 0; index < this.selectedWeapons.length; index++) {
+              let weapon = this.selectedWeapons[index];
+              if (this.currentWeapons[weapon]) {
+                costSum +=
+                  this.currentWeapons[weapon].cost *
+                  this.selectedWeaponsCount[index];
+              }
+            }
+
+            return costSum;
+          },
+          calculateRemainingPower: function () {
+            let powerSum = this.hulls[this.selectedHull].power;
+
+            for (let index = 0; index < this.selectedFittings.length; index++) {
+              let fitting = this.selectedFittings[index];
+              if (this.currentFittings[fitting]) {
+                powerSum -=
+                  this.calculatePower(this.currentFittings[fitting]) *
+                  this.selectedFittingsCount[index];
+              }
+            }
+
+            for (let index = 0; index < this.selectedDefenses.length; index++) {
+              let defense = this.selectedDefenses[index];
+              if (this.currentDefenses[defense]) {
+                powerSum -=
+                  this.calculatePower(this.currentDefenses[defense]) *
+                  this.selectedDefensesCount[index];
+              }
+            }
+
+            for (let index = 0; index < this.selectedWeapons.length; index++) {
+              let weapon = this.selectedWeapons[index];
+              if (this.currentWeapons[weapon]) {
+                powerSum -=
+                  this.currentWeapons[weapon].power *
+                  this.selectedWeaponsCount[index];
+              }
+            }
+
+            if (!this.powerOverflow && powerSum < 0) {
+              this.powerOverflow = true;
+            } else if (this.powerOverflow && powerSum >= 0) {
+              this.powerOverflow = false;
+            }
+
+            return powerSum;
+          },
+          calculateRemainingMass: function () {
+            let massSum = this.hulls[this.selectedHull].mass;
+
+            for (let index = 0; index < this.selectedFittings.length; index++) {
+              let fitting = this.selectedFittings[index];
+              if (this.currentFittings[fitting]) {
+                massSum -=
+                  this.calculateMass(this.currentFittings[fitting]) *
+                  this.selectedFittingsCount[index];
+              }
+            }
+
+            for (let index = 0; index < this.selectedDefenses.length; index++) {
+              let defense = this.selectedDefenses[index];
+              if (this.currentDefenses[defense]) {
+                massSum -=
+                  this.calculateMass(this.currentDefenses[defense]) *
+                  this.selectedDefensesCount[index];
+              }
+            }
+
+            for (let index = 0; index < this.selectedWeapons.length; index++) {
+              let weapon = this.selectedWeapons[index];
+              if (this.currentWeapons[weapon]) {
+                massSum -=
+                  this.currentWeapons[weapon].mass *
+                  this.selectedWeaponsCount[index];
+              }
+            }
+
+            if (!this.massOverflow && massSum < 0) {
+              this.massOverflow = true;
+            } else if (this.massOverflow && massSum >= 0) {
+              this.massOverflow = false;
+            }
+
+            return massSum;
+          },
+          calculateTotalSpeed: function () {
+            let speedSum = this.hulls[this.selectedHull].speed;
+
+            for (let index = 0; index < this.selectedDefenses.length; index++) {
+              let defense = this.selectedDefenses[index];
+              if (this.currentDefenses[defense]) {
+                speedSum +=
+                  this.currentDefenses[defense].speed *
+                  this.selectedDefensesCount[index];
+              }
+            }
+
+            return speedSum;
+          },
+          calculateTotalAC: function () {
+            let acSum = this.hulls[this.selectedHull].ac;
+
+            for (let index = 0; index < this.selectedDefenses.length; index++) {
+              let defense = this.selectedDefenses[index];
+              if (this.currentDefenses[defense]) {
+                acSum +=
+                  this.currentDefenses[defense].ac *
+                  this.selectedDefensesCount[index];
+              }
+            }
+
+            return acSum;
+          },
+          calculateTotalHP: function () {
+            let hpSum = this.hulls[this.selectedHull].hp;
+
+            for (let index = 0; index < this.selectedDefenses.length; index++) {
+              let defense = this.selectedDefenses[index];
+              if (this.currentDefenses[defense]) {
+                hpSum +=
+                  this.currentDefenses[defense].hp *
+                  this.selectedDefensesCount[index];
+              }
+            }
+
+            return hpSum;
+          },
+          calulateRemainingHardPoints: function () {
+            let hardPointSum = this.hulls[this.selectedHull].hardPoints;
+
+            for (let index = 0; index < this.selectedWeapons.length; index++) {
+              let weapon = this.selectedWeapons[index];
+              if (this.currentWeapons[weapon]) {
+                hardPointSum -=
+                  this.currentWeapons[weapon].hardPoints *
+                  this.selectedWeaponsCount[index];
+              }
+            }
+
+            if (!this.hardPointOverflow && hardPointSum < 0) {
+              this.hardPointOverflow = true;
+            } else if (this.hardPointOverflow && hardPointSum >= 0) {
+              this.hardPointOverflow = false;
+            }
+
+            return hardPointSum;
+          },
+          generateOptionString: function (fitting) {
+            const name = fitting.name;
+            const cost = "Cost: " + this.calculateCost(fitting);
+            const power = "Power: " + this.calculatePower(fitting);
+            const mass = "Mass: " + this.calculateMass(fitting);
+
+            const optionString =
+              name + " (" + cost + "; " + power + "; " + mass + ")";
+            return optionString;
+          },
+          generateWeaponOptionString: function (weapon) {
+            const name = weapon.name;
+            const cost =
+              "Cost: " +
+              weapon.cost.toLocaleString() +
+              (weapon.ammoCost > 0
+                ? "/" + weapon.ammoCost.toLocaleString()
+                : "");
+            const dmg = "Dmg: " + weapon.dmg;
+            const power = "Power: " + weapon.power;
+            const mass = "Mass: " + weapon.mass;
+            const hardPoints = "Hard Points: " + weapon.hardPoints;
+
+            const optionString =
+              name +
+              " (" +
+              cost +
+              "; " +
+              dmg +
+              "; " +
+              power +
+              "; " +
+              mass +
+              "; " +
+              hardPoints +
+              ")";
+            return optionString;
+          },
+          calculateDriveRating: function () {
+            let highestRating = 1;
+
+            for (let index = 0; index < this.selectedFittings.length; index++) {
+              let fitting = this.selectedFittings[index];
+              if (
+                this.currentFittings[fitting] &&
+                this.currentFittings[fitting].name.includes("Drive-")
+              ) {
+                let ratingNum = this.currentFittings[fitting].name.charAt(6);
+
+                if (ratingNum > highestRating) {
+                  highestRating = ratingNum;
+                }
+              }
+            }
+
+            return highestRating;
+          },
+          calculateCargoSpace: function () {
+            let cargoSpaceCounter = 0;
+
+            for (let index = 0; index < this.selectedFittings.length; index++) {
+              let fitting = this.selectedFittings[index];
+              if (
+                this.currentFittings[fitting] &&
+                this.currentFittings[fitting].name === "Cargo Space"
+              ) {
+                cargoSpaceCounter += 1 * this.selectedFittingsCount[index];
+              }
+            }
+
+            switch (this.hulls[this.selectedHull].hullClass) {
+              case hullClassEnum.fighter:
+                return cargoSpaceCounter * 2;
+              case hullClassEnum.frigate:
+                return cargoSpaceCounter * 20;
+              case hullClassEnum.cruiser:
+                return cargoSpaceCounter * 200;
+              case hullClassEnum.capital:
+                return cargoSpaceCounter * 2000;
+            }
+          },
+          calculateSmugglersSpace: function () {
+            let cargoSpaceCounter = 0;
+
+            for (let index = 0; index < this.selectedFittings.length; index++) {
+              let fitting = this.selectedFittings[index];
+              if (
+                this.currentFittings[fitting] &&
+                this.currentFittings[fitting].name === "Smuggler's Hold"
+              ) {
+                cargoSpaceCounter += 1 * this.selectedFittingsCount[index];
+              }
+            }
+
+            switch (this.hulls[this.selectedHull].hullClass) {
+              case hullClassEnum.fighter:
+                return cargoSpaceCounter * 0.2;
+              case hullClassEnum.frigate:
+                return cargoSpaceCounter * 2;
+              case hullClassEnum.cruiser:
+                return cargoSpaceCounter * 20;
+              case hullClassEnum.capital:
+                return cargoSpaceCounter * 200;
+            }
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
