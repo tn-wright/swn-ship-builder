@@ -20,13 +20,15 @@
       </div>
       <div class="builder">
         <div class="hullSelection builderSection">
-          <p>Hull Type:</p>
-          <select v-model="selectedHull" @change="filterFittingLists">
-            <option value=""></option>
-            <option v-for="(hull,index) of hulls" v-bind:value="index">
-              {{hull.name}}
-            </option>
-          </select>
+          <div class="hullSelector">
+            <p>Hull Type:</p>
+            <select v-model="selectedHull" @change="filterFittingLists">
+              <option value=""></option>
+              <option v-for="(hull,index) of hulls" v-bind:value="index">
+                {{hull.name}}
+              </option>
+            </select>
+          </div>
           <p v-if="selectedHull !== ''">
             <span class="boldText">Cost:</span>
             {{hulls[selectedHull].cost.toLocaleString()}}
@@ -128,17 +130,42 @@
         </div>
       </div>
       <div v-if="selectedHull !== ''" class="results">
+        <div class="resultSubset">
+          <table>
+            <tr>
+              <th>Hull Type</th>
+              <th>Hull Class</th>
+              <th>Cost</th>
+              <th>Drive Rating</th>
+            </tr>
+            <tr>
+              <td>{{convertHullClassNumber(hulls[selectedHull].hullClass)}}</td>
+              <td>{{hulls[selectedHull].name}}</td>
+              <td>{{calculateTotalCost().toLocaleString()}}</td>
+              <td>{{calculateDriveRating()}}</td>
+            </tr>
+          </table>
+          <table>
+            <tr>
+              <th>Speed</th>
+              <th>Armor</th>
+              <th>HP</th>
+              <th>Crew</th>
+              <th>AC</th>
+            </tr>
+            <tr>
+              <td>{{calculateTotalSpeed()}}</td>
+              <td>{{hulls[selectedHull].armor}}</td>
+              <td>{{calculateTotalHP()}}</td>
+              <td>
+                {{hulls[selectedHull].crewMin}}/{{hulls[selectedHull].crewMax}}
+              </td>
+              <td>{{calculateTotalAC()}}</td>
+            </tr>
+          </table>
+        </div>
         <table>
           <tr>
-            <th>Hull Type</th>
-            <th>Hull Class</th>
-            <th>Cost</th>
-            <th>Drive Rating</th>
-            <th>Speed</th>
-            <th>Armor</th>
-            <th>HP</th>
-            <th>Crew</th>
-            <th>AC</th>
             <th>Rem. Power</th>
             <th>Rem. Mass</th>
             <th>Rem. Hard Points</th>
@@ -146,17 +173,6 @@
             <th>Smuggler's Space</th>
           </tr>
           <tr>
-            <td>{{hulls[selectedHull].name}}</td>
-            <td>{{convertHullClassNumber(hulls[selectedHull].hullClass)}}</td>
-            <td>{{calculateTotalCost().toLocaleString()}}</td>
-            <td>{{calculateDriveRating()}}</td>
-            <td>{{calculateTotalSpeed()}}</td>
-            <td>{{hulls[selectedHull].armor}}</td>
-            <td>{{calculateTotalHP()}}</td>
-            <td>
-              {{hulls[selectedHull].crewMin}}/{{hulls[selectedHull].crewMax}}
-            </td>
-            <td>{{calculateTotalAC()}}</td>
             <td v-bind:class="{ resultOverflow: powerOverflow }">
               {{calculateRemainingPower()}}
             </td>

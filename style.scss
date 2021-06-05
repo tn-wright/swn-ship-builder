@@ -14,11 +14,16 @@ body {
 
 .boldText {
   font-weight: bold;
-  margin-left: 16px;
+  margin-left: 1rem;
 }
 
 .header {
   text-align: center;
+}
+
+.hullSelector {
+  display: flex;
+  flex-direction: row;
 }
 
 .hullSelection,
@@ -29,7 +34,7 @@ body {
   align-items: center;
 
   p {
-    margin: 0 16px;
+    margin: 0 1rem;
   }
 }
 
@@ -47,7 +52,7 @@ body {
   display: flex;
   justify-content: flex-end;
   position: absolute;
-  left: 40px;
+  left: 2.5rem;
   width: 91.8%;
 
   select {
@@ -65,7 +70,7 @@ body {
 }
 
 .builderSection {
-  margin: 24px 0;
+  margin: 1.5rem 0;
 }
 
 .sectionHeading {
@@ -74,8 +79,8 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   border-bottom: 1px solid white;
-  padding-bottom: 8px;
-  margin: 0 16px 8px 16px;
+  padding-bottom: 0.5rem;
+  margin: 0 1rem 0.5rem 1rem;
 
   h2 {
     margin: 0;
@@ -84,19 +89,60 @@ body {
 }
 
 table {
-  margin: auto;
+  margin-top: 2rem;
 
   th,
   td {
-    padding: 0 8px;
+    padding: 0 0.5rem;
     text-align: center;
   }
 }
 
 .results {
-  margin-top: 64px;
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.resultSubset {
+  display: flex;
 }
 
 .resultOverflow {
   color: red;
+}
+
+@media (max-width: 1290px) {
+  .results {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 1245px) {
+  .hullSelection {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .hullSelector {
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .rowContainer {
+    flex-direction: column;
+  }
+
+  .fittingRow {
+    width: 100%;
+  }
+}
+
+@media (max-width: 670px) {
+  .resultSubset {
+    flex-direction: column;
+  }
 }
