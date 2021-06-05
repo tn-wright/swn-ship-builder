@@ -189,6 +189,7 @@
       </div>
     </div>
     <script>
+      //Enum to represent the hull classes
       const hullClassEnum = Object.freeze({
         fighter: 1,
         frigate: 2,
@@ -196,6 +197,7 @@
         capital: 4,
       });
 
+      //Array of hull objects
       const hulls = [
         {
           name: "Strike Fighter",
@@ -367,6 +369,7 @@
         },
       ];
 
+      //Array of fitting objects
       const fittings = [
         {
           name: "Advanced Lab",
@@ -866,6 +869,7 @@
         },
       ];
 
+      //Array of defense objects
       const defenses = [
         {
           name: "Ablative Hull Compartments",
@@ -995,6 +999,7 @@
         },
       ];
 
+      //array of weapon objects
       const weapons = [
         {
           name: "Multifocal Laser",
@@ -1245,6 +1250,7 @@
         },
       ];
 
+      //Vue object
       var app = new Vue({
         el: "#app",
         data: {
